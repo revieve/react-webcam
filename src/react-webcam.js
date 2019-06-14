@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 function hasGetUserMedia() {
   return !!(
     (navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+    || navigator.getUserMedia
     || navigator.webkitGetUserMedia
     || navigator.mozGetUserMedia
     || navigator.msGetUserMedia
@@ -205,11 +206,6 @@ export default class Webcam extends Component {
   requestUserMedia() {
     const { props } = this;
 
-    navigator.getUserMedia = navigator.mediaDevices.getUserMedia
-      || navigator.webkitGetUserMedia
-      || navigator.mozGetUserMedia
-      || navigator.msGetUserMedia;
-
     const sourceSelected = (audioConstraints, videoConstraints) => {
       const constraints = {
         video: videoConstraints || true,
@@ -219,40 +215,34 @@ export default class Webcam extends Component {
         constraints.audio = audioConstraints || true;
       }
 
-      const handleUserMediaSuccess = stream => {
-        Webcam.mountedInstances.forEach(instance =>
-          instance.handleUserMedia(null, stream)
-        );
+      const handleUserMediaSuccess = (stream) => {
+        Webcam.mountedInstances.forEach(instance => instance.handleUserMedia(null, stream));
       };
 
-      const handleUserMediaFailure = e => {
-        Webcam.mountedInstances.forEach(instance =>
-          instance.handleUserMedia(e)
-        );
+      const handleUserMediaFailure = (e) => {
+        Webcam.mountedInstances.forEach(instance => instance.handleUserMedia(e));
       };
 
-      navigator.getWebcam = 
-        navigator.getUserMedia ||
-        navigator.webKitGetUserMedia ||
-        navigator.moxGetUserMedia ||
-        navigator.mozGetUserMedia ||
-        navigator.msGetUserMedia;
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices
           .getUserMedia(constraints)
           .then(handleUserMediaSuccess)
           .catch(handleUserMediaFailure);
       } else {
+        navigator.getUserMedia = navigator.getUserMedia
+          || navigator.webkitGetUserMedia
+          || navigator.mozGetUserMedia
+          || navigator.msGetUserMedia;
+
         // legacy webKitGetUserMedia requires 3 args. constraints, onSuccess, onErr
         // legacy getUserMedia does not return promise.
-        navigator
-          .getWebcam(
-            constraints,
-            handleUserMediaSuccess,
-            handleUserMediaFailure
+        navigator.getUserMedia(
+          constraints,
+          handleUserMediaSuccess,
+          handleUserMediaFailure,
         );
       }
-    };  
+    };
 
     if ('mediaDevices' in navigator) {
       sourceSelected(props.audioConstraints, props.videoConstraints);
