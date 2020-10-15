@@ -60,7 +60,7 @@ export interface WebcamProps extends React.HTMLProps<HTMLVideoElement> {
   onUserMediaError: (error: string) => void;
   screenshotFormat: "image/webp" | "image/png" | "image/jpeg";
   screenshotQuality: number;
-  videoConstraints?: MediaStreamConstraints["video"];
+  videoConstraints?: MediaStreamConstraints["video"] | MediaStreamConstraints["video"][];
 }
 
 interface WebcamState {
@@ -242,7 +242,10 @@ export default class Webcam extends React.Component<WebcamProps, WebcamState> {
   private requestUserMedia() {
     const { props } = this;
 
-    const sourceSelected = (audioConstraints, videoConstraints) => {
+    const sourceSelected = (audioConstraints, videoConstraintsSet) => {
+      const videoConstraints = Array.isArray(videoConstraintsSet)
+        ? videoConstraintsSet[0]
+        : videoConstraintsSet;
       const constraints: MediaStreamConstraints = {
         video: typeof videoConstraints !== "undefined" ? videoConstraints : true
       };
@@ -250,6 +253,10 @@ export default class Webcam extends React.Component<WebcamProps, WebcamState> {
       if (props.audio) {
         constraints.audio =
           typeof audioConstraints !== "undefined" ? audioConstraints : true;
+      }
+
+      if (constraints.video) {
+        console.log('[webcam] trying constraints', constraints.video);
       }
 
       navigator.mediaDevices
@@ -262,7 +269,13 @@ export default class Webcam extends React.Component<WebcamProps, WebcamState> {
           }
         })
         .catch(e => {
-          this.handleUserMedia(e);
+          // try next constraints if available
+          const isRecoverableError = e.name === "AbortError" || e.name === "OverconstrainedError";
+          if (isRecoverableError && Array.isArray(videoConstraintsSet) && videoConstraintsSet.length > 1) {
+            sourceSelected(audioConstraints, videoConstraintsSet.slice(1));
+          } else {
+            this.handleUserMedia(e);
+          }
         });
     };
 

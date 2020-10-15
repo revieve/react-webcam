@@ -6,6 +6,7 @@
   "types": "dist/react-webcam.d.ts",
   "scripts": {
     "prepublish": "npm run build:production",
+    "prepare": "npm run build:production",
     "build": "NODE_ENV=development webpack-cli",
     "build:production": "npm run build && NODE_ENV=production webpack-cli",
     "lint": "eslint src/react-webcam.tsx",
